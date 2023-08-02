@@ -1,0 +1,15 @@
+numpy
+matplotlib
+Flask
+Flask-Security-Too
+Flask-SQLAlchemy
+Flask-Caching
+flask-restful
+bcrypt
+email_validator
+pybase64
+SQLAlchemy
+Jinja2
+weasyprint
+celery
+Flask-Cors
