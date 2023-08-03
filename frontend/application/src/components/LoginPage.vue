@@ -140,8 +140,10 @@ export default {
                                     sessionStorage.setItem("role", user_data["role"]);
                                     if (user_data["role"] == "customer") {
                                         this.$router.push({ path: `/user/dashboard` });
-                                    } else {
+                                    } else if (user_data["role"] == "admin") {
                                         this.$router.push({ path: `/admin/dashboard` });
+                                    } else {
+                                        this.$router.push({ path: `/manager/${user_data["username"]}/dashboard` });
                                     }
                                     this.success_msg = myResp.msg;
                                 } else {

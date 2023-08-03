@@ -6,7 +6,10 @@ import Home from "./views/Home.vue";
 import RegisterView from "./views/Register.vue";
 import LoginView from "./views/Login.vue";
 import AdminDashboardView from "./views/AdminDashboard.vue";
+import AddTheatreView from "./views/AddTheatre.vue";
 import TheatreView from "./views/Theatre.vue";
+import ManagerDashboardView from "./views/ManagerDashboard.vue"
+import AddShowView from "./views/AddShow.vue"
 import ShowView from "./views/Show.vue";
 import CustomerDashboardView from "./views/CustomerDashboard.vue";
 import SearchView from "./views/Search.vue";
@@ -48,12 +51,27 @@ export default new Router({
       component: AdminDashboardView
     },
     {
+      path: "/theatre/add_new",
+      name: "add_theatre",
+      component: AddTheatreView
+    },
+    {
       path: "/theatre/:id",
       name: "theatre",
       component: TheatreView
     },
     {
-      path: "/show",
+      path: "/manager/:username/dashboard",
+      name: "manager_dashboard",
+      component: ManagerDashboardView
+    },
+    {
+      path: "/manager/:username/show/add_new",
+      name: "add_show",
+      component: AddShowView
+    },
+    {
+      path: "/:username/show/:id",
       name: "show",
       component: ShowView
     },

@@ -8,8 +8,9 @@
       </div>
       <ul class="nav">
         <li>
-          <router-link to="/dashboard" style="color:white;text-decoration: none;">Dashboard</router-link> |
-          <button class="nav-btn" @click="logout">Logout</button>
+          <router-link :to="'/manager/' + this.username + '/dashboard'"
+            style="color:white;text-decoration: none;">Dashboard</router-link> |
+          <button class="nav-btn" @click="logoutUser">Logout</button>
         </li>
         <li>
           <button class="nav-btn" @click="toggleDarkMode">
@@ -21,42 +22,41 @@
 
     <!-- Main content -->
     <main class="main-content">
-      <h2>{{ isManager ? 'Update Show' : 'Show Details' }}</h2>
-      <div class="show-details" v-if="isShow">
+      <h2>{{ isEditable ? 'Create New Show' : 'Update Show' }}</h2>
+      <div class="show-details">
         <div class="field">
           <label>Title:</label>
-          <input v-model="show.title" :disabled="!isManager" />
+          <input v-model="shows.title" :disabled="!isManager" />
         </div>
         <div class="field">
           <label>Duration:</label>
-          <input v-model="show.duration" :disabled="!isManager" type="text" />
+          <input v-model="shows.duration" :disabled="!isManager" type="text" />
         </div>
         <div class="field">
           <label>Tags:</label>
-          <input v-model="show.tags" :disabled="!isManager" type="text" />
-        </div>
-        <div class="field">
-          <label>Ratings:</label>
-          <div class="rating-stars" v-if="isManager">
-            <span v-for="star in 5" :key="star" @click="setRating(star)"
-              :class="{ 'rated': show.ratings >= star }">&#9733;</span>
-          </div>
-          <div v-else>{{ show.ratings }} &#9733;</div>
+          <input v-model="shows.tags" :disabled="!isManager" type="text" />
         </div>
         <div class="field" v-if="isManager">
           <label>Theatres:</label>
           <ul>
             <li v-for="(theatre, idx) in managedTheatres" :key="theatre.id">
-              <input type="checkbox" class="radio" v-model="theatre.selected" />
+              <input type="checkbox" v-model="theatre.selected" />
               {{ theatre.name }}
               <div v-if="theatre.selected">
                 <label>Price:</label>
-                <input v-model="show.price" :disabled="!isManager" type="number" step="0.01" />
+                <input v-model="theatre.price" :disabled="!isManager" type="number" step="0.01" />
                 <label>Time:</label>
-                <input v-model="show.time" :disabled="!isManager" type="datetime-local" />
+                <input v-model="theatre.time" :disabled="!isManager" type="datetime-local" />
                 <label>Available Seats:</label>
-                <input v-model="show.seats" :disabled="!isManager" type="number" />
+                <input v-model="theatre.seats" :disabled="!isManager" type="number" />
               </div>
+              <!-- <input type="checkbox" v-model="shows.theatre.id" :value="theatre.id" /> {{ theatre.name }}
+              <label>Price:</label>
+              <input v-model="shows.theatre.price" :disabled="!isManager" type="number" step="0.01" />
+              <label>Time:</label>
+              <input v-model="shows.theatre.time" :disabled="!isManager" type="time" />
+              <label>Available Seats:</label>
+              <input v-model="shows.theatre.seats" :disabled="!isManager" type="number" /> -->
             </li>
           </ul>
         </div>
@@ -64,9 +64,6 @@
           <button class="btn" @click="submit">Submit</button>
           <button class="btn btn-cancel" @click="cancel">Cancel</button>
         </div>
-      </div>
-      <div v-else>
-        Loading...
       </div>
     </main>
   </div>
@@ -81,10 +78,12 @@ export default {
       username: "", // Replace this with the actual username
       role: "", // Replace this with the actual user's role (admin, manager, or customer)
       auth_token: "",
-      show: null,
+      shows: {
+        title: "",
+        duration: 0,
+        tags: "",
+      },
       managedTheatres: [],
-      show_id: "",
-      nullShow: true,
       isEditable: true,
       darkMode: false,
       error_txt: "",
@@ -95,21 +94,11 @@ export default {
     isManager() {
       return this.role === "manager";
     },
-    isShow() {
-      return !this.nullShow;
-    }
-  },
-  watch: {
-    show() {
-      this.nullShow = false;
-    }
   },
   async created() {
+    this.role = sessionStorage.getItem("role");
     this.username = sessionStorage.getItem("username");
     this.auth_token = sessionStorage.getItem("authentication-token");
-    this.role = sessionStorage.getItem("role");
-    this.show_id = this.$route.path.split("/")[3];
-
     const firstRequestOptions = {
       method: "GET",
       headers: {
@@ -117,24 +106,29 @@ export default {
         "Authentication-Token": this.auth_token,
       }
     };
-    console.log(firstRequestOptions);
-    await fetch(`${baseURL}/${this.username}/show/${this.show_id}`, firstRequestOptions)
+
+    await fetch(`${baseURL}/manager/${this.username}/show/add_new`, firstRequestOptions)
       .then(async (response) => {
         if (!response.ok) {
           throw Error(response.statusText);
         }
         const myResp = await response.json();
-        console.log(myResp);
         if (myResp) {
           if (myResp.resp == "ok") {
-            this.show = myResp.stuff.show_data;
-            this.managedTheatres = myResp.stuff.theatre_list;
+            this.managedTheatres = myResp.stuff;
             this.success_msg = myResp.msg;
+
+            this.managedTheatres.forEach((theatre) => {
+              theatre.selected = false;
+              theatre.price = "";
+              theatre.time = "";
+              theatre.seats = "";
+            });
           } else {
             throw Error(myResp.msg);
           }
         } else {
-          throw Error("Invalid data received.");
+          throw Error("Invalid data received");
         }
       })
       .catch((error) => {
@@ -142,25 +136,123 @@ export default {
         console.log("Request failed. Error: ", error);
       })
   },
+  watch: {
+    theatre() {
+      theatre.selected = !theatre.selected;
+    }
+  },
   methods: {
-    logout() {
-      // Implement your logout functionality here
-    },
-    setRating(rating) {
-      this.show.ratings = rating;
-    },
-    submit() {
+    // toggleTheatre(theatre) {
+    //   theatre.selected = !theatre.selected;
+    // },
+    async submit() {
       // Implement the submit functionality here
       // Save the changes made to the show details
-      this.isEditable = false;
+      // this.isEditable = false;
+      const selectedTheatres = this.managedTheatres.filter((theatre) => theatre.selected);
+      const requestBody = {
+        title: this.shows.title,
+        duration: this.shows.duration,
+        tags: this.shows.tags,
+        theatres: selectedTheatres.map((theatre) => {
+          return {
+            id: theatre.id,
+            price: theatre.price,
+            time: new Date(theatre.time),
+            seats: theatre.seats,
+          };
+        }),
+      };
+
+      const addShowRequestOptions = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json;charset=utf-8",
+          "Authentication-Token": this.auth_token,
+        },
+        body: JSON.stringify(requestBody),
+      };
+
+      await fetch(`${baseURL}/manager/${this.username}/show/add_new`, addShowRequestOptions)
+        .then(async (response) => {
+          if (!response.ok) {
+            throw Error(response.statusText);
+          }
+          const myResp = await response.json();
+          if (myResp) {
+            if (myResp.resp == "ok") {
+              this.success_msg = myResp.msg;
+              this.$router.push({ path: `/manager/${this.username}/dashboard` });
+            } else {
+              throw Error(myResp.msg);
+            }
+          } else {
+            throw Error("Invalid data received.");
+          }
+        })
+        .catch((error) => {
+          this.error_txt = error;
+          console.log("Request failed. Error: ", error);
+        })
     },
     cancel() {
       // Implement the cancel functionality here
       // Reset the changes made to the show details
-      this.isEditable = false;
+      this.$router.push({ path: `/manager/${this.username}/dashboard` });
+      // this.isEditable = false;
     },
     toggleDarkMode() {
       this.darkMode = !this.darkMode;
+    },
+    async logoutUser() {
+      // Implement your logout functionality here
+      const logoutRequestOptions = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json;charset=utf-8",
+          "Authentication-Token": this.auth_token
+        },
+      };
+
+      await fetch(`${baseURL}/logout_page`, logoutRequestOptions)
+        .then(async (response) => {
+          if (!response.ok) {
+            throw Error(response.statusText);
+          }
+          const myResp = await response.json();
+          if (myResp) {
+            if (myResp.resp == "ok") {
+              this.success_msg = myResp.msg;
+              this.logoutAuth(logoutRequestOptions);
+              sessionStorage.clear();
+              console.log("Logging out");
+              this.$router.push({ path: `/login_page` })
+            } else {
+              throw Error(myResp.msg);
+            }
+          } else {
+            throw Error("Something went wrong. Invalid data received.");
+          }
+        })
+        .catch((error) => {
+          this.error_txt = error;
+          console.log("Logout failed. Error: ", error);
+        })
+
+    },
+    async logoutAuth(reqoptions) {
+      await fetch(`${baseURL}/logout`, reqoptions)
+        .then(async (response) => {
+          if (!response.ok) {
+            throw Error(response.statusText);
+          }
+          const myResp = await response.json();
+          console.log("Logging out auth");
+        })
+        .catch((error) => {
+          this.error_txt = error;
+          console.log("Logout failed. Error: ", error);
+        })
     },
   },
 };

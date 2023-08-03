@@ -1,5 +1,5 @@
 <template>
-    <div :class="['admin-dashboard', { 'dark-mode': darkMode }]">
+    <div :class="['manager-dashboard', { 'dark-mode': darkMode }]">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
@@ -8,7 +8,8 @@
             <ul class="nav">
                 <!-- Add other navigation links here as needed -->
                 <li>
-                    <router-link to="/theatre/add_new"><button class="nav-btn">Add Theatre</button></router-link> |
+                    <router-link :to="'/manager/' + this.username + '/show/add_new'"><button class="nav-btn">Add
+                            Show</button></router-link> |
                     <button class="nav-btn" @click="logoutUser">Logout</button>
                 </li>
                 <li>
@@ -26,37 +27,20 @@
                 <p id="error_txt" class="alert alert-danger" role="alert" v-if="error_txt">{{ error_txt }}</p>
                 <p id="success_msg" class="alert alert-success" role="alert" v-if="success_msg">{{ success_msg }}</p>
             </div>
-            <h3 class="section-subtitle">Unmanaged Theatres</h3>
-            <div class="theatres-list">
-                <ul>
-                    <!-- List of unmanaged theatres -->
-                    <li v-for="theatre in   theatres  " :key="theatre.id" v-if="!theatre.manager">
-                        <router-link :to="'/theatre/' + theatre.id">{{ theatre.name }}</router-link>(Capacity: {{
-                            theatre.capacity }},
-                        Address: {{ theatre.address }})
-                        <ul>
-                            <!-- Shows hosted in each managed theatre -->
-                            <li v-for="  show   in   theatre.shows  " :key="show.id">
-                                {{ show.title }} - {{ show.time }}
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
 
             <h3 class="section-subtitle">Managed Theatres</h3>
             <div class="theatres-list">
                 <ul>
                     <!-- List of managed theatres -->
-                    <li v-for="  theatre   in   theatres  " :key="theatre.id" v-if="theatre.manager">
+                    <li v-for="  theatre   in   theatres  " :key="theatre.id">
                         <router-link :to="'/theatre/' + theatre.id">{{ theatre.name }}</router-link> (Capacity: {{
                             theatre.capacity }},
-                        Address: {{ theatre.address }}, Manager: {{
-                            theatre.manager.username }})
+                        Address: {{ theatre.address }})
                         <ul>
                             <!-- Shows hosted in each managed theatre -->
                             <li v-for="  show   in   theatre.shows  " :key="show.id">
-                                {{ show.title }} - {{ show.time }}
+                                <router-link :to="'/' + username + '/show/' + show.id">{{ show.title }}</router-link> - {{
+                                    new Date(show.time).toLocaleString() }}
                             </li>
                         </ul>
                     </li>
@@ -69,7 +53,7 @@
 <script>
 const baseURL = "http://127.0.0.1:5000"
 export default {
-    name: "AdminDashboardPage",
+    name: "ManagerDashboardPage",
     data() {
         return {
             role: "", // Replace this with the actual user's role
@@ -81,6 +65,7 @@ export default {
             darkMode: false,
         };
     },
+
     async created() {
         this.auth_token = sessionStorage.getItem("authentication-token");
         this.username = sessionStorage.getItem("username");
@@ -96,7 +81,7 @@ export default {
 
         try {
 
-            await fetch(`${baseURL}/admin/dashboard`, requestOptions)
+            await fetch(`${baseURL}/manager/${this.username}/dashboard`, requestOptions)
                 .then(async (response) => {
                     if (!response.ok) {
                         throw Error(response.statusText);
@@ -106,7 +91,8 @@ export default {
                         if (myResp.resp == "ok") {
                             this.success_msg = myResp.msg;
                             this.theatres = myResp.stuff;
-                            console.log(this.theatres);
+                            console.log("Hi")
+                            console.log(myResp.stuff);
                         } else {
                             throw Error(myResp.msg);
                         }
@@ -184,7 +170,7 @@ export default {
   
 <style lang="stylus" scoped>
   /* Dashboard styles */
-  .admin-dashboard {
+  .manager-dashboard {
     display: flex;
     background-color: #f5f5f5;
     color: #333; /* Default text color */
